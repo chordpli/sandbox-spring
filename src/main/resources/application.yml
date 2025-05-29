@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: sandbox
+  datasource:
+    url: jdbc:postgresql://localhost:5429/sandbox
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: true
