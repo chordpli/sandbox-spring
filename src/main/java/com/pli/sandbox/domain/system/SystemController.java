@@ -17,9 +17,15 @@ public class SystemController {
 
     @GetMapping("/health")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Health check successful", content = @Content(mediaType = "application/json", schemaProperties = {
-                    @SchemaProperty(name = "status", schema = @Schema(type = "string", example = "OK")),
-            })),
+        @ApiResponse(
+                responseCode = "200",
+                description = "Health check successful",
+                content =
+                        @Content(
+                                mediaType = "application/json",
+                                schemaProperties = {
+                                    @SchemaProperty(name = "status", schema = @Schema(type = "string", example = "OK")),
+                                })),
     })
     public String health() {
         return "OK";

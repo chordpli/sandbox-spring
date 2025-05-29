@@ -1,8 +1,5 @@
 package com.pli.sandbox.domain.users.model;
 
-import org.hibernate.annotations.Comment;
-import org.hibernate.annotations.SQLRestriction;
-
 import com.pli.sandbox.common.constant.RoleConstants;
 import com.pli.sandbox.common.entity.AbstractJpaPersistable;
 import jakarta.persistence.AttributeOverride;
@@ -13,6 +10,8 @@ import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Getter

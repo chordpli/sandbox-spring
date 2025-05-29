@@ -2,6 +2,7 @@ plugins {
 	id 'java'
 	id 'org.springframework.boot' version '3.5.0'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'com.diffplug.spotless' version '6.24.0'
 }
 
 group = 'com.pli'
@@ -50,4 +51,45 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+spotless {
+  java {
+    importOrder()
+    removeUnusedImports()
+    cleanthat()
+    palantirJavaFormat()
+    formatAnnotations()
+    targetExclude("src/main/generated/**/*.java")
+  }
+}
+
+tasks.register('updateGitHooks', Copy) {
+	from './scripts/pre-commit'
+	into './.git/hooks'
+}
+
+tasks.register('makeGitHooksExecutable', Exec) {
+	commandLine 'chmod', '+x', './.git/hooks/pre-commit'
+	dependsOn updateGitHooks
+}
+
+compileJava.dependsOn makeGitHooksExecutable
+
+// Querydsl 설정부
+def querydslSrcDir = 'src/main/generated'
+
+// querydsl QClass 파일 생성 위치 지정
+tasks.withType(JavaCompile).configureEach {
+	options.getGeneratedSourceOutputDirectory().set(file(querydslSrcDir))
+}
+
+// java source set 에 querydsl QClass 위치 추가
+sourceSets {
+	main.java.srcDirs += [querydslSrcDir]
+}
+
+// gradle clean 시에 QClass 디렉토리 삭제
+clean {
+	delete file(querydslSrcDir)
 }

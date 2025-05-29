@@ -1,8 +1,8 @@
-package com.pli.programhub.domain.users.repository.query.adpater;
+package com.pli.sandbox.domain.users.repository.query.adpater;
 
-import com.pli.programhub.domain.users.model.User;
-import com.pli.programhub.domain.users.repository.UserJpaRepository;
-import com.pli.programhub.domain.users.repository.query.UserQueryRepository;
+import com.pli.sandbox.domain.users.model.User;
+import com.pli.sandbox.domain.users.repository.UserJpaRepository;
+import com.pli.sandbox.domain.users.repository.query.UserQueryRepository;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;

@@ -38,5 +38,4 @@ public class SignUpDto {
             return request;
         }
     }
-
 }

@@ -1,6 +1,6 @@
-package com.pli.programhub.domain.users.repository.query;
+package com.pli.sandbox.domain.users.repository.query;
 
-import com.pli.programhub.domain.users.model.User;
+import com.pli.sandbox.domain.users.model.User;
 import java.util.Optional;
 
 public interface UserQueryRepository {

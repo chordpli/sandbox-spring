@@ -7,8 +7,7 @@ import org.springframework.lang.NonNull;
 public class AuditorAwareImpl implements AuditorAware<Long> {
 
     @Override
-    @NonNull
-    public Optional<Long> getCurrentAuditor() {
+    @NonNull public Optional<Long> getCurrentAuditor() {
         return Optional.of(1L);
     }
 }

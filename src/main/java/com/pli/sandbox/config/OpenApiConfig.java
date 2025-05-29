@@ -10,7 +10,7 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
     @Bean
     public OpenAPI openAPI() {
-        Info info = new Info().title("Program hub API Document").version("v0.0.1").description("Program hub API docs.");
+        Info info = new Info().title("Sandbox API Document").version("v0.0.1").description("Sandbox API docs.");
         return new OpenAPI().components(new Components()).info(info);
     }
 }
