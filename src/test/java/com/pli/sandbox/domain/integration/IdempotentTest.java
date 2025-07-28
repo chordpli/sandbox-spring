@@ -40,6 +40,7 @@ public class IdempotentTest {
     @Autowired
     private IdempotentService idempotentService;
 
+    private static final int NUM_RUNS = 3;
     private static final int BATCH_SIZE = 1000;
 
     @BeforeEach
@@ -51,6 +52,19 @@ public class IdempotentTest {
     @Test
     @DisplayName("시나리오 1-1: Application-level SELECT 후 INSERT (인덱스 없음)")
     void testScenario1_1() throws Exception {
+        List<Long> durations = new ArrayList<>();
+        for (int i = 0; i < NUM_RUNS; i++) {
+            jdbcTemplate.execute("TRUNCATE TABLE bank_transaction");
+            long startTime = System.nanoTime();
+            runScenario1Logic();
+            long endTime = System.nanoTime();
+            durations.add(endTime - startTime);
+            verifyRecordCount("Scenario 1-1");
+        }
+        logPerformance("Scenario 1-1", durations);
+    }
+
+    private void runScenario1Logic() throws Exception {
         // Initial data load
         List<BankTransaction> initialData = readCsv("idempotent/dataset_a.csv");
         idempotentService.saveAll(initialData);
@@ -58,22 +72,28 @@ public class IdempotentTest {
         // Test data load
         List<BankTransaction> testData = readCsv("idempotent/dataset_b.csv");
 
-        long startTime = System.nanoTime();
         for (BankTransaction transaction : testData) {
             if (!idempotentService.exists(transaction)) {
                 idempotentService.saveAll(List.of(transaction));
             }
         }
-        long endTime = System.nanoTime();
-        logPerformance("Scenario 1-1", endTime - startTime);
     }
 
     @Test
     @DisplayName("시나리오 1-2: Application-level SELECT 후 INSERT (인덱스 있음)")
     void testScenario1_2() throws Exception {
-        jdbcTemplate.execute(
-                "CREATE INDEX idx_bank_transaction_lookup ON bank_transaction (transaction_time, account_number, transaction_type, amount)");
-        testScenario1_1();
+        List<Long> durations = new ArrayList<>();
+        for (int i = 0; i < NUM_RUNS; i++) {
+            jdbcTemplate.execute("TRUNCATE TABLE bank_transaction");
+            jdbcTemplate.execute(
+                    "CREATE INDEX idx_bank_transaction_lookup ON bank_transaction (transaction_time, account_number, transaction_type, amount)");
+            long startTime = System.nanoTime();
+            runScenario1Logic();
+            long endTime = System.nanoTime();
+            durations.add(endTime - startTime);
+            verifyRecordCount("Scenario 1-2");
+        }
+        logPerformance("Scenario 1-2", durations);
     }
 
     @Test
@@ -82,39 +102,26 @@ public class IdempotentTest {
         jdbcTemplate.execute("ALTER TABLE bank_transaction DROP CONSTRAINT IF EXISTS uk_transaction_composite");
         jdbcTemplate.execute(
                 "ALTER TABLE bank_transaction ADD CONSTRAINT uk_transaction_composite UNIQUE (transaction_time, account_number, transaction_type, amount)");
-        // Initial data load
-        List<BankTransaction> initialData = readCsv("idempotent/dataset_a.csv");
-        idempotentService.saveAll(initialData);
 
-        // Test data load
-        List<BankTransaction> testData = readCsv("idempotent/dataset_b.csv");
+        List<Long> durations = new ArrayList<>();
+        for (int i = 0; i < NUM_RUNS; i++) {
+            jdbcTemplate.execute("TRUNCATE TABLE bank_transaction");
+            // Initial data load
+            List<BankTransaction> initialData = readCsv("idempotent/dataset_a.csv");
+            idempotentService.saveAll(initialData);
 
-        long startTime = System.nanoTime();
-        try (Connection connection = dataSource.getConnection()) {
-            connection.setAutoCommit(false);
+            // Test data load
+            List<BankTransaction> testData = readCsv("idempotent/dataset_b.csv");
+
+            long startTime = System.nanoTime();
             String sql =
-                    "MERGE INTO bank_transaction (transaction_time, account_number, transaction_type, amount, balance, counterparty_name, memo) KEY (transaction_time, account_number, transaction_type, amount) VALUES (?, ?, ?, ?, ?, ?, ?)";
-            try (PreparedStatement ps = connection.prepareStatement(sql)) {
-                for (int i = 0; i < testData.size(); i++) {
-                    BankTransaction row = testData.get(i);
-                    ps.setTimestamp(1, Timestamp.valueOf(row.getTransactionTime()));
-                    ps.setString(2, row.getAccountNumber());
-                    ps.setString(3, row.getTransactionType());
-                    ps.setBigDecimal(4, row.getAmount());
-                    ps.setBigDecimal(5, row.getBalance());
-                    ps.setString(6, row.getCounterpartyName());
-                    ps.setString(7, row.getMemo());
-                    ps.addBatch();
-                    if ((i + 1) % BATCH_SIZE == 0) {
-                        ps.executeBatch();
-                    }
-                }
-                ps.executeBatch();
-            }
-            connection.commit();
+                    "INSERT INTO bank_transaction (transaction_time, account_number, transaction_type, amount, balance, counterparty_name, memo) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT (transaction_time, account_number, transaction_type, amount) DO NOTHING";
+            idempotentService.saveAllWithConflictResolution(testData, sql);
+            long endTime = System.nanoTime();
+            durations.add(endTime - startTime);
+            verifyRecordCount("Scenario 2-1");
         }
-        long endTime = System.nanoTime();
-        logPerformance("Scenario 2-1", endTime - startTime);
+        logPerformance("Scenario 2-1", durations);
     }
 
     @Test
@@ -122,40 +129,26 @@ public class IdempotentTest {
     void testScenario3_1() throws Exception {
         jdbcTemplate.execute("DROP INDEX IF EXISTS uk_transaction_hash");
         jdbcTemplate.execute("CREATE UNIQUE INDEX uk_transaction_hash ON bank_transaction (hash_value)");
-        // Initial data load
-        List<BankTransaction> initialData = readCsv("idempotent/dataset_a.csv");
-        idempotentService.saveAll(initialData);
 
-        // Test data load
-        List<BankTransaction> testData = readCsv("idempotent/dataset_b.csv");
+        List<Long> durations = new ArrayList<>();
+        for (int i = 0; i < NUM_RUNS; i++) {
+            jdbcTemplate.execute("TRUNCATE TABLE bank_transaction");
+            // Initial data load
+            List<BankTransaction> initialData = readCsv("idempotent/dataset_a.csv");
+            idempotentService.saveAll(initialData);
 
-        long startTime = System.nanoTime();
-        try (Connection connection = dataSource.getConnection()) {
-            connection.setAutoCommit(false);
+            // Test data load
+            List<BankTransaction> testData = readCsv("idempotent/dataset_b.csv");
+
+            long startTime = System.nanoTime();
             String sql =
-                    "MERGE INTO bank_transaction (transaction_time, account_number, transaction_type, amount, balance, counterparty_name, memo, hash_value) KEY (hash_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-            try (PreparedStatement ps = connection.prepareStatement(sql)) {
-                for (int i = 0; i < testData.size(); i++) {
-                    BankTransaction row = testData.get(i);
-                    ps.setTimestamp(1, Timestamp.valueOf(row.getTransactionTime()));
-                    ps.setString(2, row.getAccountNumber());
-                    ps.setString(3, row.getTransactionType());
-                    ps.setBigDecimal(4, row.getAmount());
-                    ps.setBigDecimal(5, row.getBalance());
-                    ps.setString(6, row.getCounterpartyName());
-                    ps.setString(7, row.getMemo());
-                    ps.setString(8, row.getHashValue());
-                    ps.addBatch();
-                    if ((i + 1) % BATCH_SIZE == 0) {
-                        ps.executeBatch();
-                    }
-                }
-                ps.executeBatch();
-            }
-            connection.commit();
+                    "INSERT INTO bank_transaction (transaction_time, account_number, transaction_type, amount, balance, counterparty_name, memo, hash_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (hash_value) DO NOTHING";
+            idempotentService.saveAllWithConflictResolution(testData, sql);
+            long endTime = System.nanoTime();
+            durations.add(endTime - startTime);
+            verifyRecordCount("Scenario 3-1");
         }
-        long endTime = System.nanoTime();
-        logPerformance("Scenario 3-1", endTime - startTime);
+        logPerformance("Scenario 3-1", durations);
     }
 
     @Test
@@ -267,15 +260,38 @@ public class IdempotentTest {
         return hexString.toString();
     }
 
-    private void logPerformance(String scenario, long durationNano) throws java.io.IOException {
-        long durationMillis = TimeUnit.NANOSECONDS.toMillis(durationNano);
+    private void logPerformance(String scenario, List<Long> durationsNano) throws java.io.IOException {
+        long totalDurationNano =
+                durationsNano.stream().mapToLong(Long::longValue).sum();
+        long averageDurationNano = totalDurationNano / durationsNano.size();
+        long averageDurationMillis = TimeUnit.NANOSECONDS.toMillis(averageDurationNano);
+        double rps = (double) (10000 * NUM_RUNS) / (averageDurationMillis / 1000.0);
+
         java.io.File reportsDir = new java.io.File("idempotent_results");
         if (!reportsDir.exists()) {
             reportsDir.mkdirs();
         }
         String fileName = scenario.replace(" ", "_") + "_result.txt";
         try (java.io.FileWriter writer = new java.io.FileWriter(new java.io.File(reportsDir, fileName))) {
-            writer.write(String.format("[%s] Total execution time: %d ms%n", scenario, durationMillis));
+            writer.write(String.format("[%s] Total runs: %d%n", scenario, NUM_RUNS));
+            writer.write(String.format("[%s] Average execution time: %d ms%n", scenario, averageDurationMillis));
+            writer.write(String.format("[%s] Average RPS: %.2f%n", scenario, rps));
+            writer.write(String.format(
+                    "[%s] All durations (ms): %s%n",
+                    scenario,
+                    durationsNano.stream()
+                            .map(TimeUnit.NANOSECONDS::toMillis)
+                            .map(String::valueOf)
+                            .collect(java.util.stream.Collectors.joining(", "))));
         }
+    }
+
+    private void verifyRecordCount(String scenario) {
+        long count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM bank_transaction", Long.class);
+        if (count != 11000) {
+            throw new IllegalStateException(String.format(
+                    "[%s] Record count verification failed. Expected 11000, but got %d", scenario, count));
+        }
+        System.out.printf("[%s] Record count verified: %d%n", scenario, count);
     }
 }
