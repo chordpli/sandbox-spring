@@ -1,0 +1,1 @@
+[Scenario 4-1] Total execution time: 50 ms

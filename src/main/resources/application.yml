@@ -2,7 +2,7 @@ spring:
   application:
     name: sandbox
   datasource:
-    url: jdbc:postgresql://localhost:5429/sandbox
+    url: jdbc:postgresql://localhost:5432/
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver
