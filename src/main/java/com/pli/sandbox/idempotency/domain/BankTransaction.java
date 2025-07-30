@@ -7,8 +7,10 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Getter
+@Setter
 @Entity
 @Table(name = "bank_transaction")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -32,6 +34,7 @@ public class BankTransaction {
 
     private String memo;
 
+    @Column(length = 64)
     private String hashValue;
 
     @Builder

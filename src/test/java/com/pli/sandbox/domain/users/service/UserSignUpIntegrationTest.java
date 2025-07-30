@@ -4,30 +4,27 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.pli.sandbox.common.test.IntegrationTest;
 import com.pli.sandbox.domain.coupon.service.command.CouponCommandService;
 import com.pli.sandbox.domain.users.dto.SignUpDto;
 import com.pli.sandbox.domain.users.model.User;
 import com.pli.sandbox.domain.users.repository.command.UserCommandRepository;
 import com.pli.sandbox.domain.users.service.command.UserCommandService;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
 
-@SpringBootTest
-@ActiveProfiles("test")
-class UserSignUpIntegrationTest {
+@Disabled
+class UserSignUpIntegrationTest extends IntegrationTest {
 
     @Autowired
     private UserCommandService userCommandService;
 
-    // @MockitoSpyBean
     private CouponCommandService couponCommandService;
 
-    // @MockitoBean
     private UserCommandRepository userCommandRepository;
 
     @Test

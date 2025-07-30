@@ -52,10 +52,14 @@ dependencies {
 	testImplementation 'org.springframework:spring-context'
 	testImplementation 'org.springframework.boot:spring-boot-test-autoconfigure'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	testImplementation 'org.testcontainers:junit-jupiter:1.20.0'
+	testImplementation 'org.testcontainers:postgresql:1.20.0'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+	jvmArgs = ['-Xmx4g', '-Dspring.profiles.active=test']
 }
 
 spotless {

@@ -1,7 +1,6 @@
 package com.pli.sandbox.idempotency.service;
 
 import com.pli.sandbox.idempotency.domain.BankTransaction;
-import com.pli.sandbox.idempotency.repository.BankTransactionRepository;
 import java.sql.Timestamp;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -13,26 +12,41 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class IdempotentService {
 
-    private final BankTransactionRepository bankTransactionRepository;
     private final JdbcTemplate jdbcTemplate;
 
     @Transactional
     public void saveAll(List<BankTransaction> transactions) {
-        bankTransactionRepository.saveAll(transactions);
+        String sql =
+                "INSERT INTO bank_transaction (transaction_time, account_number, transaction_type, amount, balance, counterparty_name, memo, hash_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        jdbcTemplate.batchUpdate(sql, transactions, 1000, (ps, transaction) -> {
+            ps.setTimestamp(1, Timestamp.valueOf(transaction.getTransactionTime()));
+            ps.setString(2, transaction.getAccountNumber());
+            ps.setString(3, transaction.getTransactionType());
+            ps.setBigDecimal(4, transaction.getAmount());
+            ps.setBigDecimal(5, transaction.getBalance());
+            ps.setString(6, transaction.getCounterpartyName());
+            ps.setString(7, transaction.getMemo());
+            ps.setString(8, transaction.getHashValue());
+        });
     }
 
     @Transactional(readOnly = true)
     public boolean exists(BankTransaction transaction) {
-        return bankTransactionRepository.existsByTransactionTimeAndAccountNumberAndTransactionTypeAndAmount(
+        String sql =
+                "SELECT COUNT(*) FROM bank_transaction WHERE transaction_time = ? AND account_number = ? AND transaction_type = ? AND amount = ?";
+        Integer count = jdbcTemplate.queryForObject(
+                sql,
+                Integer.class,
                 transaction.getTransactionTime(),
                 transaction.getAccountNumber(),
                 transaction.getTransactionType(),
                 transaction.getAmount());
+        return count != null && count > 0;
     }
 
     @Transactional
     public void saveAllWithConflictResolution(List<BankTransaction> transactions, String conflictSql) {
-        jdbcTemplate.batchUpdate(conflictSql, transactions, transactions.size(), (ps, transaction) -> {
+        jdbcTemplate.batchUpdate(conflictSql, transactions, 1000, (ps, transaction) -> {
             ps.setTimestamp(1, Timestamp.valueOf(transaction.getTransactionTime()));
             ps.setString(2, transaction.getAccountNumber());
             ps.setString(3, transaction.getTransactionType());
@@ -50,8 +64,8 @@ public class IdempotentService {
     public void saveAllToStagingAndMerge(List<BankTransaction> transactions) {
         // 1. Load to staging table
         String insertStagingSql =
-                "INSERT INTO bank_transaction_staging (transaction_time, account_number, transaction_type, amount, balance, counterparty_name, memo) VALUES (?, ?, ?, ?, ?, ?, ?)";
-        jdbcTemplate.batchUpdate(insertStagingSql, transactions, transactions.size(), (ps, transaction) -> {
+                "INSERT INTO bank_transaction_staging (transaction_time, account_number, transaction_type, amount, balance, counterparty_name, memo, hash_value) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        jdbcTemplate.batchUpdate(insertStagingSql, transactions, 1000, (ps, transaction) -> {
             ps.setTimestamp(1, Timestamp.valueOf(transaction.getTransactionTime()));
             ps.setString(2, transaction.getAccountNumber());
             ps.setString(3, transaction.getTransactionType());
@@ -59,6 +73,7 @@ public class IdempotentService {
             ps.setBigDecimal(5, transaction.getBalance());
             ps.setString(6, transaction.getCounterpartyName());
             ps.setString(7, transaction.getMemo());
+            ps.setString(8, transaction.getHashValue());
         });
 
         // 2. Merge

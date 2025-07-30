@@ -31,10 +31,10 @@ def generate_csv(filename, data):
         writer.writerows(data)
 
 # Parameters
-NUM_ROWS_A = 10000
-NUM_ROWS_B = 10000
-OVERLAP_B = 9000
-NEW_B = 1000
+NUM_ROWS_A = 100000
+NUM_ROWS_B = 100000
+OVERLAP_B = 90000
+NEW_B = 10000
 
 start_time_a = datetime(2025, 1, 1, 9, 0, 0)
 
