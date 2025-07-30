@@ -1,0 +1,4 @@
+[Scenario 1-2] Total runs: 3
+[Scenario 1-2] Average execution time: 98748 ms
+[Scenario 1-2] Average RPS: 1012.68
+[Scenario 1-2] All durations (ms): 106082, 74482, 115679
